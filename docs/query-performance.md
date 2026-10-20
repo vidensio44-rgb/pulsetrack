@@ -98,3 +98,41 @@ and the small dataset.
 
 These results provide an initial performance baseline for future
 optimization and larger-scale testing.
+
+## 7. Monthly Event Partitioning — V6
+
+### Implementation
+
+Migration `V6__monthly_event_partition.sql` creates the dedicated range partition `events_2026_09` for event timestamps from 1 September 2026 (inclusive) to 1 October 2026 (exclusive).
+
+Existing September events were moved from `events_default` into the new partition through the parent `events` table.
+
+### Data Validation
+
+- Events in `events_2026_09`: 7
+- Total events in `events`: 7
+- September events in the reporting range: 7
+- Data preservation check: passed
+
+### Partition-Pruning Test
+
+The following query was tested using `EXPLAIN (ANALYZE, BUFFERS)` against `pulsetrack_test`:
+
+```sql
+SELECT event_id, event_time
+FROM events
+WHERE event_time >= TIMESTAMPTZ '2026-09-01 00:00:00+00'
+  AND event_time < TIMESTAMPTZ '2026-10-01 00:00:00+00';
+```
+
+PostgreSQL used an index-only scan on `events_2026_09` and returned all seven matching rows. The plan did not scan `events_default`, demonstrating partition pruning for this date range.
+
+- Execution time: 0.115 ms
+- Planning time: 3.989 ms
+- Shared buffer hits reported by the execution plan: 2
+
+### Interpretation and Limitations
+
+The execution plan confirms that PostgreSQL can exclude the default partition for this September query. The measured execution time reflects a small demonstration dataset and a single run; it does not establish a production-scale performance improvement.
+
+Future monthly partitions should be created before their date ranges are needed, with a process for monitoring and managing the default partition.
