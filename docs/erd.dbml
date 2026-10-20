@@ -1,0 +1,92 @@
+Project PulseTrack {
+  database_type: 'PostgreSQL'
+  Note: 'Real-Time Analytics Platform'
+}
+
+Table tenants {
+  tenant_id bigint [pk, increment]
+  tenant_name varchar(150) [not null]
+  created_at timestamptz [not null, default: `now()`]
+}
+
+Table users {
+  user_id bigint [pk, increment]
+  tenant_id bigint [not null, ref: > tenants.tenant_id]
+  email varchar(255)
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (tenant_id, user_id) [unique]
+    (tenant_id, email) [unique]
+  }
+}
+
+Table sessions {
+  session_id uuid [pk]
+  tenant_id bigint [not null, ref: > tenants.tenant_id]
+  user_id bigint
+  started_at timestamptz [not null]
+  ended_at timestamptz
+
+  indexes {
+    (tenant_id, session_id) [unique]
+  }
+}
+
+Table events {
+  event_id bigint [increment]
+  event_time timestamptz [not null]
+  tenant_id bigint [not null, ref: > tenants.tenant_id]
+  user_id bigint
+  session_id uuid
+  event_type varchar(100) [not null]
+  properties jsonb
+
+  indexes {
+    (event_time, event_id) [pk]
+    (tenant_id, event_time)
+  }
+}
+
+Table products {
+  product_id bigint [pk, increment]
+  tenant_id bigint [not null, ref: > tenants.tenant_id]
+  product_name varchar(200) [not null]
+  current_price numeric(12,2) [not null, check: `current_price >= 0`]
+  currency char(3) [not null, default: 'KES']
+
+  indexes {
+    (tenant_id, product_id) [unique]
+  }
+}
+
+Table orders {
+  order_id bigint [pk, increment]
+  tenant_id bigint [not null, ref: > tenants.tenant_id]
+  user_id bigint [not null]
+  order_time timestamptz [not null]
+  order_status varchar(30) [not null]
+  currency char(3) [not null, default: 'KES']
+  total_amount numeric(12,2) [not null, check: `total_amount >= 0`]
+
+  indexes {
+    (tenant_id, order_id) [unique]
+  }
+}
+
+Table order_items {
+  order_item_id bigint [pk, increment]
+  tenant_id bigint [not null, ref: > tenants.tenant_id]
+  order_id bigint [not null]
+  product_id bigint [not null]
+  quantity integer [not null, check: `quantity > 0`]
+  unit_price numeric(12,2) [not null, check: `unit_price >= 0`]
+}
+
+// Relationships requiring composite foreign keys in PostgreSQL migrations:
+Ref: sessions.(tenant_id, user_id) > users.(tenant_id, user_id)
+Ref: events.(tenant_id, user_id) > users.(tenant_id, user_id)
+Ref: events.(tenant_id, session_id) > sessions.(tenant_id, session_id)
+Ref: orders.(tenant_id, user_id) > users.(tenant_id, user_id)
+Ref: order_items.(tenant_id, order_id) > orders.(tenant_id, order_id)
+Ref: order_items.(tenant_id, product_id) > products.(tenant_id, product_id)

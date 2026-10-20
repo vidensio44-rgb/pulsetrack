@@ -1,0 +1,15 @@
+
+[flyway]
+
+locations = ["filesystem:migrations"]
+validateMigrationNaming = true
+
+[environments.local]
+
+url = "jdbc:postgresql://127.0.0.1:5432/pulsetrack"
+user = "postgres"
+
+[environments.test]
+
+url = "jdbc:postgresql://127.0.0.1:5432/pulsetrack_test"
+user = "postgres"

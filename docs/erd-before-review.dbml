@@ -1,0 +1,65 @@
+Project PulseTrack {
+  database_type: 'PostgreSQL'
+  Note: 'Real-Time Analytics Platform'
+}
+
+Table tenants {
+  tenant_id bigint [pk, increment]
+  tenant_name varchar(150) [not null]
+  created_at timestamptz [not null, default: `now()`]
+}
+
+Table users {
+  user_id bigint [pk, increment]
+  tenant_id bigint [not null, ref: > tenants.tenant_id]
+  email varchar(255)
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (tenant_id, email) [unique]
+  }
+}
+
+Table sessions {
+  session_id uuid [pk]
+  tenant_id bigint [not null, ref: > tenants.tenant_id]
+  user_id bigint [ref: > users.user_id]
+  started_at timestamptz [not null]
+  ended_at timestamptz
+}
+
+Table events {
+  event_id bigint [pk, increment]
+  tenant_id bigint [not null, ref: > tenants.tenant_id]
+  user_id bigint [ref: > users.user_id]
+  session_id uuid [ref: > sessions.session_id]
+  event_type varchar(100) [not null]
+  event_time timestamptz [not null]
+  properties jsonb
+}
+
+Table products {
+  product_id bigint [pk, increment]
+  tenant_id bigint [not null, ref: > tenants.tenant_id]
+  product_name varchar(200) [not null]
+  current_price numeric(12,2) [not null]
+  currency char(3) [not null, default: 'KES']
+}
+
+Table orders {
+  order_id bigint [pk, increment]
+  tenant_id bigint [not null, ref: > tenants.tenant_id]
+  user_id bigint [not null, ref: > users.user_id]
+  order_time timestamptz [not null]
+  order_status varchar(30) [not null]
+  currency char(3) [not null, default: 'KES']
+  total_amount numeric(12,2) [not null]
+}
+
+Table order_items {
+  order_item_id bigint [pk, increment]
+  order_id bigint [not null, ref: > orders.order_id]
+  product_id bigint [not null, ref: > products.product_id]
+  quantity integer [not null]
+  unit_price numeric(12,2) [not null]
+}
